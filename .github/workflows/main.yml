@@ -3,7 +3,7 @@ name: mon premier workflow
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   build:
@@ -15,6 +15,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+      - name: Install dependencies
+        working-directory: './frontend'
+        run: npm install
       - name: Linter
         working-directory: './frontend'
         run: npm run lint
