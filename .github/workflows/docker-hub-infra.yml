@@ -16,7 +16,7 @@ jobs:
             image: laurentt/chap19-frontend
           
           - name: api-node
-            directory: ./api-node
+            directory: ./node-api
             image: laurentt/chap19-api-node
     
     steps:
@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Obtenir le hash du dernier commit pour le tag des nouvelles images
-        run: echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHBU_ENV
+        run: echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
       
       - name: Connexion à Docker hub
         uses: docker/login-action@v2
