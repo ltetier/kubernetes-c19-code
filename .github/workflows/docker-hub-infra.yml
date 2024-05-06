@@ -60,4 +60,4 @@ jobs:
           git config --global user.email "github-actions@example.com"
           git add .
           git commit -m "Mise à jour des versions des images dans les déploiements K8s à $NEW_TAG"
-          git push main  
+          git push origin main  
