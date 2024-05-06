@@ -1,0 +1,61 @@
+name: Construire et pousser les images Docker sur Docker Hub et mettre à jour le répertoire infra pour déclencher Argo CD
+
+on:
+  push:
+    branches:
+      - main
+  
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    strategy: 
+      matrix: 
+        include:
+          - name: frontend
+            directory: ./frontend
+            image: laurentt/chap19-frontend
+          
+          - name: api-node
+            directory: ./api-node
+            image: laurentt/chap19-api-node
+    
+    steps:
+      - name: Récupérer le code source
+        uses: actions/checkout@v4
+      
+      - name: Obtenir le hash du dernier commit pour le tag des nouvelles images
+        run: echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHBU_ENV
+      
+      - name: Connexion à Docker hub
+        uses: docker/login-action@v2
+        with:   
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+     
+      - name: construire et pousser l'image ${{ matrix.name }}
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ matrix.directory }}
+          file: ${{ matrix.directory }}/Dockerfile
+          push: true
+          tags: ${{ matrix.image }}:${{ env.VERSION }}
+  
+  update_k8:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Mettre à jour les déploiement K8s
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add - <<< ${ secrets.GH_DEPLOYMENT_KEY}
+          git clone git@github.com:ltetier/kubernetes-c19-infra.git
+          cd kubernetes-c19-infra/k8s
+          NEW_TAG=$(echo $GITHUB_SHA | cut -c1-7)
+          sed -i "s|laurentt/chap19-frontend\(:[a-zA-Z0-9_.-]*\)\?|laurentt/chap19-frontend:${NEW_TAG}|g" fronted.deployment.yaml
+          sed -i "s|laurentt/chap19-api-node\(:[a-zA-Z0-9_.-]*\)\?|laurentt/chap19-api-node:${NEW_TAG}|g" api.deployment.yaml
+          git config --global user.name "Github Actions" 
+          git config --global user.email "github-actions@example.com"
+          git add .
+          git commit -m "Mise à jour des versions des images dans les déploiements K8s à $NEW_TAG"
+          git push main  
